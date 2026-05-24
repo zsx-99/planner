@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>日程计划表</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f0f2f5;--surface:#fff;--border:#e5e7eb;--text:#1f2937;--text-secondary:#6b7280;--text-muted:#9ca3af;--accent:#3b82f6;--accent-light:#eff6ff;--danger:#ef4444;--danger-light:#fef2f2;--today-ring:#3b82f6;--selected-bg:#dbeafe;--hover-bg:#f3f4f6;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);--shadow-lg:0 10px 25px rgba(0,0,0,.12);--radius:8px;--radius-sm:6px;--left-width:340px;--hour-height:64px;--timeline-padding:48px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;color:var(--text);background:var(--bg);height:100vh;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{display:flex;height:100vh}
+#left-panel{width:var(--left-width);min-width:var(--left-width);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:10;box-shadow:var(--shadow)}
+.panel-brand{padding:20px 20px 12px;font-size:20px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.view-toggle{display:flex;margin:0 20px 12px;background:var(--bg);border-radius:var(--radius-sm);padding:3px}
+.view-toggle button{flex:1;padding:6px 0;border:none;background:transparent;border-radius:4px;font-size:13px;cursor:pointer;color:var(--text-secondary);transition:all .15s}
+.view-toggle button.active{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.calendar-container{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px 10px}
+.cal-title{font-size:15px;font-weight:600}
+.cal-nav{display:flex;gap:2px}
+.cal-nav button,.cal-today{width:30px;height:28px;border:none;background:transparent;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-secondary);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-nav button:hover,.cal-today:hover{background:var(--hover-bg);color:var(--text)}
+.cal-today{width:auto;padding:0 10px;font-size:12px;font-weight:500}
+.day-names{display:grid;grid-template-columns:repeat(7,1fr);padding:0 12px 4px;font-size:11px;color:var(--text-muted);text-align:center;font-weight:500}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 12px;gap:2px}
+.day-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;position:relative;transition:background .1s;-webkit-tap-highlight-color:transparent;user-select:none}
+.day-cell:active{background:var(--hover-bg)}
+.day-cell.other-month{color:var(--text-muted)}
+.day-cell.today{box-shadow:inset 0 0 0 2px var(--today-ring)}
+.day-cell.selected{background:var(--selected-bg);font-weight:600}
+.day-dots{display:flex;gap:2px;margin-top:1px;flex-wrap:wrap;justify-content:center;max-width:100%}
+.day-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.week-days{display:grid;grid-template-columns:repeat(7,1fr);flex:1;overflow-y:auto;padding:0 8px}
+.week-col{border-right:1px solid var(--border);padding:0 4px;cursor:pointer;min-height:100%;-webkit-tap-highlight-color:transparent}
+.week-col:last-child{border-right:none}
+.week-col-header{text-align:center;padding:8px 0 6px;font-size:11px;color:var(--text-muted)}
+.week-col-header .day-num{font-size:18px;font-weight:600;color:var(--text);display:block}
+.week-col.today .week-col-header .day-num{width:30px;height:30px;line-height:30px;margin:0 auto;border-radius:50%;background:var(--accent);color:#fff;font-size:16px}
+.week-col.selected{background:var(--accent-light)}
+.week-mini-plan{font-size:10px;padding:3px 5px;margin:2px 0;border-radius:3px;background:var(--hover-bg);border-left:3px solid #ccc;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.week-mini-plan .mini-time{color:var(--text-muted);margin-right:3px}
+#right-panel{flex:1;display:flex;flex-direction:column;background:var(--surface);overflow:hidden}
+.day-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+.day-nav{display:flex;gap:4px}
+.day-nav button{width:32px;height:32px;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);cursor:pointer;font-size:16px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.day-nav button:hover{background:var(--hover-bg)}
+.day-label{font-size:18px;font-weight:600}
+.day-actions{display:flex;gap:8px;align-items:center}
+.btn{padding:6px 14px;border:none;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:active{background:#2563eb}
+.btn-ghost{background:transparent;color:var(--text-secondary)}
+.btn-ghost:active{background:var(--hover-bg);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.all-day-section{padding:8px 24px 8px calc(24px + var(--timeline-padding));border-bottom:1px solid var(--border);flex-shrink:0;min-height:0}
+.all-day-section:empty{display:none}
+.all-day-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.all-day-plan{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;margin:2px 6px 2px 0;border-radius:4px;font-size:12px;cursor:pointer;border-left:3px solid #ccc;background:var(--hover-bg);transition:background .1s}
+.all-day-plan:active{background:#e5e7eb}
+.timeline-wrapper{flex:1;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch}
+.timeline-grid{position:relative;min-height:calc(var(--hour-height)*24);margin-left:var(--timeline-padding)}
+.timeline-labels{position:absolute;left:0;top:0;width:calc(var(--timeline-padding) - 8px)}
+.time-label{height:var(--hour-height);display:flex;align-items:flex-start;justify-content:flex-end;padding-right:10px;font-size:11px;color:var(--text-muted)}
+.hour-row{height:var(--hour-height);border-top:1px solid var(--border)}
+.hour-row.half{border-top:1px dashed #f0f0f0}
+.time-block{position:absolute;left:8px;right:8px;border-radius:5px;padding:6px 10px;cursor:pointer;overflow:hidden;font-size:12px;transition:box-shadow .1s;border-left:3px solid;display:flex;flex-direction:column;gap:1px;-webkit-tap-highlight-color:transparent}
+.time-block:active{box-shadow:0 0 0 1px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.08)}
+.time-block .block-time{font-size:10px;color:var(--text-secondary);font-weight:500}
+.time-block .block-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.time-block .block-tag{font-size:10px;opacity:.7}
+.current-time-line{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5;pointer-events:none}
+.current-time-dot{position:absolute;left:-5px;top:-4px;width:10px;height:10px;background:var(--danger);border-radius:50%}
+.drag-preview{position:absolute;left:8px;right:8px;background:rgba(59,130,246,.15);border:1px dashed var(--accent);border-radius:5px;pointer-events:none;z-index:4}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border-radius:12px;box-shadow:var(--shadow-lg);width:420px;max-width:90vw;max-height:85vh;overflow-y:auto;padding:24px;animation:slideUp .2s}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--surface);transition:border-color .15s;-webkit-appearance:none}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:active{background:#dc2626}
+.btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:active{background:#e5e7eb}
+.modal-actions .btn-danger{margin-right:auto}
+.tag-list{max-height:250px;overflow-y:auto}
+.tag-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border)}
+.tag-row:last-child{border-bottom:none}
+.tag-color-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.tag-row input{flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:14px}
+.tag-row button{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px 8px;border-radius:4px;font-size:18px;min-width:32px}
+.tag-row button:active{color:var(--danger);background:var(--danger-light)}
+.tag-preset-badge{font-size:10px;color:var(--text-muted);background:var(--bg);padding:2px 6px;border-radius:4px;white-space:nowrap}
+.tag-add-row{margin-top:10px;display:flex;gap:8px;align-items:center}
+.tag-add-row input{flex:1}
+.tag-add-row input[type="color"]{width:36px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer}
+.tag-select{display:flex;flex-wrap:wrap;gap:4px}
+.tag-chip{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid transparent;font-weight:500;transition:all .1s;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent}
+.tag-chip:active{filter:brightness(.9)}
+.tag-chip.selected{border-color:currentColor}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#9ca3af}
+.hidden{display:none!important}
+.mobile-nav{display:none}
+.mobile-nav button{flex:1;padding:10px 0;border:none;background:transparent;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:color .15s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.mobile-nav button svg{width:22px;height:22px}
+.mobile-nav button.active{color:var(--accent)}
+@media(max-width:768px){
+body{background:var(--surface)}
+#app{flex-direction:column;padding-bottom:56px}
+#left-panel,#right-panel{width:100%!important;min-width:100%!important;height:100%!important;max-height:none!important;border-right:none;box-shadow:none}
+#left-panel.hidden-mobile,#right-panel.hidden-mobile{display:none!important}
+.panel-brand{padding:12px 20px 8px;font-size:18px;text-align:center}
+.view-toggle{margin:0 16px 10px}
+.view-toggle button{padding:8px 0;font-size:14px}
+.cal-header{padding:0 16px 8px}
+.cal-nav button,.cal-today{width:36px;height:36px;font-size:18px}
+.day-names{padding:0 8px 4px}
+.day-grid{padding:0 4px;gap:1px}
+.day-cell{font-size:14px;border-radius:8px}
+.day-dots{gap:3px}
+.day-dot{width:5px;height:5px}
+.week-col-header .day-num{font-size:16px}
+.week-col.today .week-col-header .day-num{width:28px;height:28px;line-height:28px;font-size:14px}
+.week-mini-plan{font-size:9px;padding:4px 5px}
+.day-header{padding:12px 16px}
+.day-nav button{width:40px;height:40px;font-size:20px}
+.day-label{font-size:16px}
+.all-day-section{padding:8px 16px 8px 52px}
+.all-day-plan{padding:6px 12px;font-size:13px}
+.timeline-grid{margin-left:48px}
+.timeline-labels{width:44px}
+.time-block{padding:8px 10px;font-size:13px;left:4px;right:4px}
+.time-block .block-time{font-size:11px}
+.time-block .block-title{font-size:13px}
+.drag-preview{left:4px;right:4px}
+.mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--surface);border-top:1px solid var(--border);z-index:50;padding-bottom:env(safe-area-inset-bottom,0)}
+.modal-overlay{align-items:flex-end}
+.modal{width:100%;max-width:100%;max-height:90vh;border-radius:16px 16px 0 0;padding:20px 16px 24px;animation:slideUpMobile .25s}
+@keyframes slideUpMobile{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.form-group label{font-size:13px}
+.form-group input,.form-group textarea{font-size:16px;padding:10px 12px}
+.btn{padding:8px 16px;font-size:14px}
+.btn-sm{padding:6px 14px;font-size:13px}
+.btn-primary,.btn-danger{min-height:40px}
+.tag-chip{padding:6px 14px;font-size:13px}
+.tag-add-row input[type="color"]{width:40px;height:40px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<aside id="left-panel">
+<div class="panel-brand">日程计划表</div>
+<div class="view-toggle"><button data-view="month" class="active" onclick="switchView('month')">月</button><button data-view="week" onclick="switchView('week')">周</button></div>
+<div class="calendar-container">
+<div class="cal-header"><span class="cal-title" id="calTitle"></span><div class="cal-nav"><button onclick="navCalendar(-1)">&lsaquo;</button><button class="cal-today" onclick="goToday()">今天</button><button onclick="navCalendar(1)">&rsaquo;</button></div></div>
+<div class="day-names" id="dayNames"></div>
+<div class="day-grid" id="dayGrid"></div>
+<div class="week-days hidden" id="weekDays"></div>
+</div>
+<div style="padding:12px 20px;border-top:1px solid var(--border)"><button class="btn btn-ghost btn-sm" onclick="openTagModal()" style="width:100%;justify-content:center">管理标签</button></div>
+</aside>
+<main id="right-panel" class="hidden-mobile">
+<div class="day-header"><div class="day-nav"><button onclick="changeDay(-1)">&lsaquo;</button><button onclick="changeDay(1)">&rsaquo;</button></div><span class="day-label" id="dayLabel"></span><div class="day-actions"><button class="btn btn-primary btn-sm" onclick="openPlanModal()">+ 添加计划</button></div></div>
+<div class="all-day-section" id="allDaySection"></div>
+<div class="timeline-wrapper" id="timelineWrapper"><div style="position:relative;min-height:calc(var(--hour-height)*24);margin-left:var(--timeline-padding)"><div class="timeline-labels" id="timelineLabels"></div><div class="timeline-grid" id="timelineGrid"><div class="current-time-line hidden" id="currentTimeLine"><div class="current-time-dot"></div></div></div></div></div>
+</main>
+</div>
+<nav class="mobile-nav" id="mobileNav">
+<button class="active" data-panel="calendar" onclick="switchMobilePanel('calendar')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>日历</button>
+<button data-panel="timeline" onclick="switchMobilePanel('timeline')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>日程</button>
+</nav>
+<div class="modal-overlay hidden" id="planModal"><div class="modal">
+<h3 id="planModalTitle">添加计划</h3>
+<div class="form-group"><label>标题</label><input type="text" id="planTitle" placeholder="计划标题" autocomplete="off"></div>
+<div class="form-row"><div class="form-group"><label>开始时间</label><input type="time" id="planStartTime" step="1800"></div><div class="form-group"><label>结束时间</label><input type="time" id="planEndTime" step="1800"></div></div>
+<div class="form-group"><label>标签</label><div class="tag-select" id="tagSelect"></div></div>
+<div class="form-group"><label>备注</label><textarea id="planNotes" placeholder="备注（选填）"></textarea></div>
+<div class="modal-actions"><button class="btn btn-danger btn-sm hidden" id="planDeleteBtn" onclick="deletePlan()">删除</button><button class="btn btn-secondary btn-sm" onclick="closePlanModal()">取消</button><button class="btn btn-primary btn-sm" onclick="savePlan()">保存</button></div>
+</div></div>
+<div class="modal-overlay hidden" id="tagModal"><div class="modal">
+<h3>管理标签</h3>
+<div class="tag-list" id="tagList"></div>
+<div class="tag-add-row"><input type="text" id="newTagName" placeholder="新标签名称"><input type="color" id="newTagColor" value="#6366f1"><button class="btn btn-primary btn-sm" onclick="addTag()">添加</button></div>
+<div class="modal-actions"><button class="btn btn-secondary btn-sm" onclick="closeTagModal()">完成</button></div>
+</div></div>
+<script>
+const STORAGE_KEY="planner-data";
+const PRESET_TAG_IDS=["work","personal","health","study","other"];
+const DEFAULT_TAGS=[{id:"work",name:"工作",color:"#3B82F6"},{id:"personal",name:"个人",color:"#22C55E"},{id:"health",name:"健康",color:"#F97316"},{id:"study",name:"学习",color:"#8B5CF6"},{id:"other",name:"其他",color:"#6B7280"}];
+const isMobile=window.matchMedia("(max-width: 768px)").matches;
+let state={selectedDate:todayStr(),view:"month",monthYear:{year:new Date().getFullYear(),month:new Date().getMonth()+1},weekStart:mondayOf(new Date()),plans:{},tags:[...DEFAULT_TAGS],editingPlanId:null,mobilePanel:"calendar"};
+
+function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function mondayOf(d){d=new Date(d);var day=d.getDay(),diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function loadData(){try{var raw=localStorage.getItem(STORAGE_KEY);if(raw){var data=JSON.parse(raw);if(data.plans)state.plans=data.plans;if(data.tags)state.tags=data.tags}}catch(e){}}
+function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify({plans:state.plans,tags:state.tags}))}
+function getTag(id){for(var i=0;i<state.tags.length;i++){if(state.tags[i].id===id)return state.tags[i]}return state.tags[0]}
+function getPlans(date){return(state.plans[date]||[]).slice().sort(planSort)}
+function planSort(a,b){if(!a.startTime&&!b.startTime)return 0;if(!a.startTime)return-1;if(!b.startTime)return 1;if(a.startTime<b.startTime)return-1;if(a.startTime>b.startTime)return 1;return 0}
+function generateId(){return crypto.randomUUID()}
+function parseTime(t){if(!t)return{h:0,m:0,total:0};var p=t.split(":");return{h:parseInt(p[0],10),m:parseInt(p[1],10),total:parseInt(p[0],10)*60+parseInt(p[1],10)}}
+
+function renderAll(){if(state.view==="month")renderMonth();else renderWeek();renderDayPanel()}
+
+function renderMonth(){
+document.getElementById("dayGrid").classList.remove("hidden");
+document.getElementById("weekDays").classList.add("hidden");
+document.getElementById("dayNames").classList.remove("hidden");
+document.getElementById("dayNames").innerHTML=["一","二","三","四","五","六","日"].map(function(d){return"<div>"+d+"</div>"}).join("");
+var y=state.monthYear.year,m=state.monthYear.month;
+document.getElementById("calTitle").textContent=y+"年"+m+"月";
+var fd=new Date(y,m-1,1),sdow=fd.getDay()===0?6:fd.getDay()-1;
+var dim=new Date(y,m,0).getDate(),dipm=new Date(y,m-1,0).getDate(),today=todayStr();
+var html="",total=Math.ceil((sdow+dim)/7)*7;
+for(var i=0;i<total;i++){var dn,ds,cls="day-cell";if(i<sdow){dn=dipm-sdow+i+1;ds=(m===1?y-1:y)+"-"+String(m===1?12:m-1).padStart(2,"0")+"-"+String(dn).padStart(2,"0");cls+=" other-month"}else if(i>=sdow+dim){dn=i-sdow-dim+1;ds=(m===12?y+1:y)+"-"+String(m===12?1:m+1).padStart(2,"0")+"-"+String(dn).padStart(2,"0");cls+=" other-month"}else{dn=i-sdow+1;ds=y+"-"+String(m).padStart(2,"0")+"-"+String(dn).padStart(2,"0")}if(ds===today)cls+=" today";if(ds===state.selectedDate)cls+=" selected";var pls=state.plans[ds]||[],dots="";for(var j=0;j<Math.min(pls.length,4);j++){var tg=getTag(pls[j].tagId);dots+="<span class=\"day-dot\" style=\"background:"+tg.color+"\"></span>"}var more=pls.length>4?"<span style=\"font-size:8px;color:var(--text-muted);\">+"+(pls.length-4)+"</span>":"";html+="<div class=\""+cls+"\" data-date=\""+ds+"\" onclick=\"selectDate('"+ds+"')\"><span>"+dn+"</span><div class=\"day-dots\">"+dots+more+"</div></div>"}
+document.getElementById("dayGrid").innerHTML=html}
+
+function renderWeek(){
+document.getElementById("dayGrid").classList.add("hidden");
+document.getElementById("dayNames").classList.add("hidden");
+document.getElementById("weekDays").classList.remove("hidden");
+var st=new Date(state.weekStart+"T00:00:00"),ed=new Date(st);ed.setDate(ed.getDate()+6);
+var today=todayStr();
+document.getElementById("calTitle").textContent=st.getFullYear()+"年"+(st.getMonth()+1)+"月"+st.getDate()+"日 - "+ed.getFullYear()+"年"+(ed.getMonth()+1)+"月"+ed.getDate()+"日";
+var dn=["一","二","三","四","五","六","日"],html="";
+for(var i=0;i<7;i++){var d=new Date(st);d.setDate(d.getDate()+i);
+var ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),cls="week-col";
+if(ds===today)cls+=" today";if(ds===state.selectedDate)cls+=" selected";
+var pls=getPlans(ds),ph="";for(var j=0;j<pls.length;j++){var p=pls[j],tg=getTag(p.tagId),ts=p.startTime?p.startTime.slice(0,5):"";ph+="<div class=\"week-mini-plan\" style=\"border-left-color:"+tg.color+"\" onclick=\"event.stopPropagation();selectDate('"+ds+"');openPlanModal('"+p.id+"')\"><span class=\"mini-time\">"+ts+"</span>"+escHtml(p.title)+"</div>"}
+html+="<div class=\""+cls+"\" data-date=\""+ds+"\" onclick=\"selectDate('"+ds+"')\"><div class=\"week-col-header\"><span>"+dn[i]+"</span><span class=\"day-num\">"+d.getDate()+"</span></div>"+ph+"</div>"}
+document.getElementById("weekDays").innerHTML=html}
+
+function renderDayPanel(){
+var ds=state.selectedDate,d=new Date(ds+"T00:00:00"),wd=["日","一","二","三","四","五","六"];
+document.getElementById("dayLabel").textContent=d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日 星期"+wd[d.getDay()];
+var pls=getPlans(ds),tp=[],ap=[];
+for(var i=0;i<pls.length;i++){if(pls[i].startTime)tp.push(pls[i]);else ap.push(pls[i])}
+var ae=document.getElementById("allDaySection");
+if(ap.length>0){var ah="<div class=\"all-day-label\">全天 / 备忘</div>";for(var i=0;i<ap.length;i++){var p=ap[i],tg=getTag(p.tagId);ah+="<div class=\"all-day-plan\" style=\"border-left-color:"+tg.color+"\" onclick=\"openPlanModal('"+p.id+"')\"><span class=\"block-title\">"+escHtml(p.title)+"</span><span class=\"block-tag\" style=\"color:"+tg.color+"\">"+tg.name+"</span></div>"}ae.innerHTML=ah;ae.style.display="block"}else{ae.innerHTML="";ae.style.display="none"}
+var lh="";for(var h=0;h<24;h++)lh+="<div class=\"time-label\">"+String(h).padStart(2,"0")+":00</div>";document.getElementById("timelineLabels").innerHTML=lh;
+var gh="";for(var h=0;h<24;h++)gh+="<div class=\"hour-row\"></div><div class=\"hour-row half\"></div>";gh+="<div class=\"current-time-line hidden\" id=\"currentTimeLine\"><div class=\"current-time-dot\"></div></div>";document.getElementById("timelineGrid").innerHTML=gh;
+var bl=computeBlocks(tp);for(var i=0;i<bl.length;i++){var b=bl[i],bk=document.createElement("div");bk.className="time-block";bk.style.top=b.top+"px";bk.style.height=b.height+"px";bk.style.left=b.left+"%";bk.style.width=b.width+"%";bk.style.background=b.bgColor;bk.style.borderLeftColor=b.color;(function(pl){bk.onclick=function(e){e.stopPropagation();openPlanModal(pl.id)}})(b.plan);var ss=b.plan.startTime.slice(0,5),es=b.plan.endTime?b.plan.endTime.slice(0,5):"",tr=es?ss+" - "+es:ss;bk.innerHTML="<span class=\"block-time\">"+tr+"</span><span class=\"block-title\">"+escHtml(b.plan.title)+"</span><span class=\"block-tag\" style=\"color:"+b.color+"\">"+b.tagName+"</span>";document.getElementById("timelineGrid").appendChild(bk)}
+updateCurrentTimeLine();document.getElementById("timelineWrapper").scrollTop=0}
+
+function computeBlocks(pls){if(pls.length===0)return[];var its=pls.map(function(p){return{plan:p,start:parseTime(p.startTime).total,end:p.endTime?parseTime(p.endTime).total:parseTime(p.startTime).total+60}}).sort(function(a,b){return a.start-b.start});var evs=[];for(var i=0;i<its.length;i++){evs.push({time:its[i].start,type:"start",item:its[i]});evs.push({time:its[i].end,type:"end",item:its[i]})}evs.sort(function(a,b){return a.time-b.time||(a.type==="end"?-1:1)});var act=[],icol=new Map(),mc=0;for(var i=0;i<evs.length;i++){var ev=evs[i];if(ev.type==="start"){var uc=[];for(var j=0;j<act.length;j++)uc.push(icol.get(act[j]));var col=0;while(uc.indexOf(col)!==-1)col++;icol.set(ev.item,col);act.push(ev.item);mc=Math.max(mc,col+1)}else{var idx=act.indexOf(ev.item);if(idx!==-1)act.splice(idx,1)}}return its.map(function(it){var tg=getTag(it.plan.tagId),col=icol.get(it)||0,tc=mc,top=(it.start/60)*64,ht=Math.max(((it.end-it.start)/60)*64,20),wd=(100/tc)-2,lt=col*(100/tc)+1,hex=tg.color.replace("#",""),r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);return{plan:it.plan,top:top,height:ht,left:lt,width:wd,color:tg.color,bgColor:"rgba("+r+","+g+","+b+",0.15)",tagName:tg.name}})}
+
+function updateCurrentTimeLine(){var ln=document.getElementById("currentTimeLine");if(!ln)return;var nw=new Date(),td=todayStr();if(state.selectedDate!==td){ln.classList.add("hidden");return}ln.classList.remove("hidden");var tm=nw.getHours()*60+nw.getMinutes();ln.style.top=((tm/60)*64)+"px"}
+
+function selectDate(ds){state.selectedDate=ds;renderDayPanel();if(state.view==="month")renderMonth();else renderWeek();if(isMobile)switchMobilePanel("timeline")}
+function switchView(v){state.view=v;document.querySelectorAll(".view-toggle button").forEach(function(b){b.classList.toggle("active",b.dataset.view===v)});if(v==="month"){var d=new Date(state.selectedDate+"T00:00:00");state.monthYear={year:d.getFullYear(),month:d.getMonth()+1}}else{state.weekStart=mondayOf(new Date(state.selectedDate+"T00:00:00"))}renderAll()}
+function navCalendar(dir){if(state.view==="month"){var y=state.monthYear.year,m=state.monthYear.month+dir;if(m>12){m=1;y++}if(m<1){m=12;y--}state.monthYear={year:y,month:m};renderMonth()}else{var d=new Date(state.weekStart+"T00:00:00");d.setDate(d.getDate()+dir*7);state.weekStart=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");renderWeek()}}
+function goToday(){var td=todayStr();state.selectedDate=td;if(state.view==="month"){var d=new Date();state.monthYear={year:d.getFullYear(),month:d.getMonth()+1};renderMonth()}else{state.weekStart=mondayOf(new Date());renderWeek()}renderDayPanel()}
+function changeDay(dir){var d=new Date(state.selectedDate+"T00:00:00");d.setDate(d.getDate()+dir);state.selectedDate=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(state.view==="month")state.monthYear={year:d.getFullYear(),month:d.getMonth()+1};else state.weekStart=mondayOf(d);renderAll()}
+function switchMobilePanel(p){state.mobilePanel=p;document.getElementById("left-panel").classList.toggle("hidden-mobile",p!=="calendar");document.getElementById("right-panel").classList.toggle("hidden-mobile",p!=="timeline");document.querySelectorAll(".mobile-nav button").forEach(function(b){b.classList.toggle("active",b.dataset.panel===p)});if(p==="timeline")renderDayPanel()}
+
+function openPlanModal(pid,pf){state.editingPlanId=pid||null;var te=document.getElementById("planModalTitle"),db=document.getElementById("planDeleteBtn");document.getElementById("planTitle").value="";document.getElementById("planStartTime").value="";document.getElementById("planEndTime").value="";document.getElementById("planNotes").value="";var si=state.tags.length>0?state.tags[0].id:"";if(pid){var pls=state.plans[state.selectedDate]||[];for(var i=0;i<pls.length;i++){if(pls[i].id===pid){var p=pls[i];te.textContent="编辑计划";document.getElementById("planTitle").value=p.title;document.getElementById("planStartTime").value=p.startTime||"";document.getElementById("planEndTime").value=p.endTime||"";document.getElementById("planNotes").value=p.notes||"";si=p.tagId;db.classList.remove("hidden");break}}}else{te.textContent="添加计划";db.classList.add("hidden");if(pf){if(pf.startTime)document.getElementById("planStartTime").value=pf.startTime;if(pf.endTime)document.getElementById("planEndTime").value=pf.endTime}}renderTagChips(si);document.getElementById("planModal").classList.remove("hidden");setTimeout(function(){document.getElementById("planTitle").focus()},100)}
+function closePlanModal(){document.getElementById("planModal").classList.add("hidden");state.editingPlanId=null}
+function savePlan(){var t=document.getElementById("planTitle").value.trim();if(!t){document.getElementById("planTitle").focus();return}var st=document.getElementById("planStartTime").value||"",et=document.getElementById("planEndTime").value||"",nt=document.getElementById("planNotes").value.trim(),ch=document.querySelector(".tag-chip.selected"),ti=ch?ch.dataset.tagId:(state.tags.length>0?state.tags[0].id:"other");if(!state.plans[state.selectedDate])state.plans[state.selectedDate]=[];if(state.editingPlanId){var pls=state.plans[state.selectedDate];for(var i=0;i<pls.length;i++){if(pls[i].id===state.editingPlanId){pls[i].title=t;pls[i].startTime=st||null;pls[i].endTime=et||null;pls[i].notes=nt;pls[i].tagId=ti;break}}}else{state.plans[state.selectedDate].push({id:generateId(),title:t,notes:nt,startTime:st||null,endTime:et||null,tagId:ti,createdAt:new Date().toISOString()})}saveData();closePlanModal();renderAll()}
+function deletePlan(){if(!state.editingPlanId)return;state.plans[state.selectedDate]=(state.plans[state.selectedDate]||[]).filter(function(p){return p.id!==state.editingPlanId});if(state.plans[state.selectedDate].length===0)delete state.plans[state.selectedDate];saveData();closePlanModal();renderAll()}
+function renderTagChips(si){var ct=document.getElementById("tagSelect"),h="";for(var i=0;i<state.tags.length;i++){var tg=state.tags[i],sl=tg.id===si?" selected":"";h+="<button type=\"button\" class=\"tag-chip"+sl+"\" data-tag-id=\""+tg.id+"\" style=\"background:"+tg.color+"20;color:"+tg.color+";"+(sl?"border-color:"+tg.color:"")+"\" onclick=\"selectTagChip('"+tg.id+"')\"><span style=\"display:inline-block;width:8px;height:8px;border-radius:50%;background:"+tg.color+"\"></span>"+escHtml(tg.name)+"</button>"}ct.innerHTML=h}
+function selectTagChip(ti){document.querySelectorAll(".tag-chip").forEach(function(c){var tg=null;for(var i=0;i<state.tags.length;i++){if(state.tags[i].id===c.dataset.tagId){tg=state.tags[i];break}}var sl=c.dataset.tagId===ti;c.className="tag-chip"+(sl?" selected":"");c.style.background=tg?tg.color+"20":"";c.style.color=tg?tg.color:"";c.style.borderColor=(sl&&tg)?tg.color:"transparent"})}
+function openTagModal(){renderTagList();document.getElementById("tagModal").classList.remove("hidden")}
+function closeTagModal(){document.getElementById("tagModal").classList.add("hidden")}
+function renderTagList(){var ct=document.getElementById("tagList"),h="";for(var i=0;i<state.tags.length;i++){var tg=state.tags[i],ip=PRESET_TAG_IDS.indexOf(tg.id)!==-1;h+="<div class=\"tag-row\"><span class=\"tag-color-dot\" style=\"background:"+tg.color+"\"></span><input type=\"text\" value=\""+escHtml(tg.name)+"\" onchange=\"updateTagName('"+tg.id+"',this.value)\"><input type=\"color\" value=\""+tg.color+"\" onchange=\"updateTagColor('"+tg.id+"',this.value)\">"+(ip?"<span class=\"tag-preset-badge\">预设</span>":"<button onclick=\"deleteTag('"+tg.id+"')\" title=\"删除\">&times;</button>")+"</div>"}ct.innerHTML=h}
+function updateTagName(id,nm){var tg=state.tags.find(function(t){return t.id===id});if(tg&&nm.trim()){tg.name=nm.trim();saveData()}}
+function updateTagColor(id,cl){var tg=state.tags.find(function(t){return t.id===id});if(tg){tg.color=cl;saveData()}renderAll()}
+function addTag(){var nm=document.getElementById("newTagName").value.trim(),cl=document.getElementById("newTagColor").value;if(!nm)return;state.tags.push({id:generateId(),name:nm,color:cl});document.getElementById("newTagName").value="";saveData();renderTagList()}
+function deleteTag(id){if(PRESET_TAG_IDS.indexOf(id)!==-1)return;state.tags=state.tags.filter(function(t){return t.id!==id});for(var d in state.plans){for(var i=0;i<state.plans[d].length;i++){if(state.plans[d][i].tagId===id)state.plans[d][i].tagId="other"}}saveData();renderTagList();renderAll()}
+
+var timelineDrag=null;
+function getTimelineTime(e){var w=document.getElementById("timelineWrapper"),r=w.getBoundingClientRect(),st=w.scrollTop,cy=e.touches?e.touches[0].clientY:e.clientY,y=cy-r.top+st,tm=Math.round((y/64)*60/30)*30;tm=Math.max(0,Math.min(23.5*60,tm));var h=Math.floor(tm/60),m=tm%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")}
+function onTimelineStart(e){if(e.target.classList.contains("time-block"))return;e.preventDefault();var t=getTimelineTime(e);timelineDrag={startTime:t};showDragPreview(t,t)}
+function onTimelineMove(e){if(!timelineDrag)return;e.preventDefault();var t=getTimelineTime(e);timelineDrag.currentTime=t;showDragPreview(timelineDrag.startTime,t)}
+function onTimelineEnd(e){if(!timelineDrag)return;var et=timelineDrag.currentTime||timelineDrag.startTime,s=timelineDrag.startTime,e=et;if(s>e){var tmp=s;s=e;e=tmp}hideDragPreview();timelineDrag=null;if(s===e)openPlanModal(null,{startTime:s});else openPlanModal(null,{startTime:s,endTime:e})}
+function showDragPreview(s,e){var pv=document.getElementById("dragPreview");if(!pv){pv=document.createElement("div");pv.id="dragPreview";pv.className="drag-preview";document.getElementById("timelineGrid").appendChild(pv)}var st=parseTime(s).total,et=parseTime(e).total;pv.style.top=(Math.min(st,et)/60*64)+"px";pv.style.height=Math.max(20,(Math.abs(et-st)/60*64))+"px";pv.style.display="block"}
+function hideDragPreview(){var pv=document.getElementById("dragPreview");if(pv)pv.style.display="none"}
+function escHtml(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+
+function init(){loadData();renderAll();if(isMobile){document.getElementById("right-panel").classList.add("hidden-mobile");document.getElementById("left-panel").classList.remove("hidden-mobile")}var w=document.getElementById("timelineWrapper");w.addEventListener("mousedown",onTimelineStart);w.addEventListener("touchstart",onTimelineStart,{passive:false});document.addEventListener("mousemove",onTimelineMove);document.addEventListener("touchmove",onTimelineMove,{passive:false});document.addEventListener("mouseup",onTimelineEnd);document.addEventListener("touchend",onTimelineEnd);setInterval(function(){if(state.selectedDate===todayStr())updateCurrentTimeLine()},60000)}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>
