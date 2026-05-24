@@ -1,0 +1,14 @@
+﻿{
+  "name": "日程计划表",
+  "short_name": "日程",
+  "description": "月/周视图日程管理，时间轴规划每日计划",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f0f2f5",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

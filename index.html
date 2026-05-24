@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>日程计划表</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="日程">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f0f2f5;--surface:#fff;--border:#e5e7eb;--text:#1f2937;--text-secondary:#6b7280;--text-muted:#9ca3af;--accent:#3b82f6;--accent-light:#eff6ff;--danger:#ef4444;--danger-light:#fef2f2;--today-ring:#3b82f6;--selected-bg:#dbeafe;--hover-bg:#f3f4f6;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);--shadow-lg:0 10px 25px rgba(0,0,0,.12);--radius:8px;--radius-sm:6px;--left-width:340px;--hour-height:64px;--timeline-padding:48px}
@@ -289,5 +295,7 @@ function escHtml(s){var d=document.createElement("div");d.textContent=s;return d
 function init(){loadData();renderAll();if(isMobile){document.getElementById("right-panel").classList.add("hidden-mobile");document.getElementById("left-panel").classList.remove("hidden-mobile")}var w=document.getElementById("timelineWrapper");w.addEventListener("mousedown",onTimelineStart);w.addEventListener("touchstart",onTimelineStart,{passive:false});document.addEventListener("mousemove",onTimelineMove);document.addEventListener("touchmove",onTimelineMove,{passive:false});document.addEventListener("mouseup",onTimelineEnd);document.addEventListener("touchend",onTimelineEnd);setInterval(function(){if(state.selectedDate===todayStr())updateCurrentTimeLine()},60000)}
 document.addEventListener("DOMContentLoaded",init);
 </script>
-</body>
+
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("sw.js")}</script></body>
 </html>
+
