@@ -296,6 +296,7 @@ function init(){loadData();renderAll();if(isMobile){document.getElementById("rig
 document.addEventListener("DOMContentLoaded",init);
 </script>
 
-<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("sw.js")}</script></body>
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("sw.js",{scope:"/planner/"}).then(function(r){console.log("SW registered:",r.scope)}).catch(function(e){console.error("SW failed:",e)})}</script></body>
 </html>
+
 
